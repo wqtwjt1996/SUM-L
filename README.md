@@ -43,10 +43,15 @@ ln -s /path/to/epic-kitchens-100-annotations data/epic-100/annotations
 ### Testing our trained weights on Epic-Kitchen-100:
 
 ```
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node 4 --master_port 23393 tools/run_net.py --cfg configs/epic-kitchen-100/Ego_Exo_SLOWFAST_8x8_R101.yaml TRAIN.CHECKPOINT_FILE_PATH ckpts/EE_EP100_SF101_checkpoint_epoch_00030.pyth
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node 4 --master_port 23393 tools/run_net.py --cfg configs/epic-kitchen-100/Ego_Exo_SLOWFAST_8x8_R101.yaml TRAIN.CHECKPOINT_FILE_PATH PATH_TO_WEIGHTS/EE_EP100_SF101_checkpoint_epoch_00030.pyth
 ```
 Note: you might notice there are some "extra" parameters when you load our model. These are from the third-person video backbone and the network of our proposed method. During the testing phase, we only need parameters from the first-person video backbone.
- 
+
+| Method                          | verb-top1 | verb-top5 | noun-top1 | noun-top5 |  Weights  |
+| ------------------------------- | --------- | --------- | --------- | --------- | --------- |
+| EE-SlowFast\_R101          | 67.0      | 90.7      | 53.4      | 76.9      | [Google Drive](https://drive.google.com/file/d/1rc5ab0JZsHTeWcRoKcNPlEz9tgqwBWv7/view?usp=drive_link)     |
+
+
 Codebase References:
 
 https://github.com/facebookresearch/Ego-Exo/tree/main
