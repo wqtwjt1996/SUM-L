@@ -76,10 +76,6 @@ def loss_fn_kd(outputs, teacher_outputs, alpha=0.0, T=1.0, weight=None, mode="no
 
 
 class GCELoss(nn.Module):
-    """
-        Qitong on May 6th, 2022.
-        ref: https://zhuanlan.zhihu.com/p/420913134
-    """
     def __init__(self, num_classes=10, q=0.7, eps=1e-20):
         super(GCELoss, self).__init__()
         self.q = q
@@ -106,7 +102,6 @@ class pNorm(nn.Module):
         # pred = F.softmax(pred, dim=1)
         pred = torch.clamp(pred, min=1e-7, max=1)
 
-        # 一个很简单的正则
         norm = torch.sum(pred ** self.p, dim=1)
         return norm.mean()
 
@@ -133,15 +128,8 @@ class DCL(object):
         positive_loss = -torch.diag(cross_view_distance) / self.temperature
         if self.weight_fn is not None:
             positive_loss = positive_loss * self.weight_fn(z1, z2)
-            # print((z1*z2).size(), 1)
-            # print((z1@z2.T).size(), 2)
-            # print(self.weight_fn(z1, z2))
-            # print((z1 * z2).sum(dim=1), 233)
-        # print(torch.mm(z1, z1.t()).size(), cross_view_distance.size())
         neg_similarity = torch.cat((torch.mm(z1, z1.t()), cross_view_distance), dim=1) / self.temperature
         neg_mask = torch.eye(z1.size(0), device=z1.device).repeat(1, 2)
-        # print(neg_similarity.size(), neg_mask.size())
-        # print(neg_similarity + neg_mask * SMALL_NUM)
         negative_loss = torch.logsumexp(neg_similarity + neg_mask * SMALL_NUM, dim=1, keepdim=False)
         return (positive_loss + negative_loss).mean()
 
@@ -223,9 +211,6 @@ class DCL_3(object):
             neg_2_sims = self._get_off_diag(cross_view_distance[:anchor_bs, :])
             neg_3_sims = cross_view_distance[anchor_bs:, :]
             print(neg_1_sims.size(), neg_2_sims.size(), neg_3_sims.size())
-            # neg_similarity_2 = torch.cat([neg_2_sims, neg_3_sims], dim=1) / self.temperature
-            # print(positive_loss.size(), torch.logsumexp(neg_similarity_2, dim=1, keepdim=False).size())
-            # negative_loss = torch.logsumexp(neg_similarity_2, dim=1, keepdim=False)
             negative_loss_1 = torch.logsumexp(neg_1_sims, dim=1, keepdim=False)
             negative_loss_2 = torch.logsumexp(neg_2_sims, dim=1, keepdim=False)
             negative_loss_3 = torch.logsumexp(neg_3_sims, dim=1, keepdim=False)
@@ -242,10 +227,7 @@ class DCLW(DCL):
     temperature: temperature to control the sharpness of the distribution
     """
     def __init__(self, sigma=0.5, temperature=0.1):
-        # weight_fn = lambda z1, z2: 2 - z1.size(0) * F.softmax((z1 * z2).sum(dim=1) / sigma, dim=0).squeeze()
-        # weight_fn = lambda z1, z2: 2 + z1.size(0) * torch.diagonal(z1 @ z2.T)
         weight_fn = lambda z1, z2: (2 + z1.size(0) * torch.diagonal(z1 @ z2.T)) / 2
-        # weight_fn = lambda z1, z2: z1.size(0) * F.softmax((z1 * z2).sum(dim=1) / sigma, dim=0).squeeze()
         super(DCLW, self).__init__(weight_fn=weight_fn, temperature=temperature)
 
 class DCL_OS(object):
@@ -263,11 +245,6 @@ class DCL_OS(object):
     def weight_fn(self, v1, v2):
         """ori from DCL"""
         res = v1.size(0) * F.softmax((v1 * v2).sum(dim=1) / self.sigma, dim=0).squeeze()
-        # res = v1.size(0) * F.softmax(torch.diagonal(v1 @ v2.T) / self.sigma, dim=0).squeeze()
-        # print((v1 * v2).size(), (v1 * v2).sum(dim=1).size())
-        """mine with cos sim"""
-        # res = 1 + torch.diagonal(v1 @ v2.T)
-        # res = (1 + torch.diagonal(v1 @ v2.T)) / 2
         return res
 
     def __call__(self, z1, z2, n1, n2):
@@ -279,9 +256,7 @@ class DCL_OS(object):
         """
         cross_view_distance = torch.mm(z1, z2.t())
         positive_loss = -torch.diag(cross_view_distance) / self.temperature
-        # positive_loss = positive_loss * self.weight_fn(n1, n2)
         positive_loss = positive_loss
-        # print(self.weight_fn(n1, n2), 'dcl weight check~', self.sigma)
         neg_similarity = torch.cat((torch.mm(z1, z1.t()), cross_view_distance), dim=1) / self.temperature
         neg_mask = torch.eye(z1.size(0), device=z1.device).repeat(1, 2)
         negative_loss = torch.logsumexp(neg_similarity + neg_mask * SMALL_NUM, dim=1, keepdim=False)

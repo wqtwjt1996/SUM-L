@@ -19,9 +19,6 @@ logger = logging.get_logger(__name__)
 
 @DATASET_REGISTRY.register()
 class Epickitchen(torch.utils.data.Dataset):
-    '''
-    Support epic-55 and epic-100
-    '''
     def __init__(self, cfg, mode, num_retries=10):
         """
         Args:

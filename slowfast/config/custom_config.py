@@ -41,3 +41,7 @@ def add_custom_config(_C):
     _C.LOSS = CfgNode()
     # cross-entropy loss weight
     _C.LOSS.CE_LOSS_WEIGHT = 1.0
+
+    _C.HANDOBJ = CfgNode()
+
+    _C.HANDOBJ.ENABLE = False

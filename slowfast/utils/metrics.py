@@ -99,7 +99,7 @@ def topk_accuracies(preds, labels, ks):
     num_topks_correct = topks_correct(preds, labels, ks)
     return [(x / preds.size(0)) * 100.0 for x in num_topks_correct]
 
-from slowfast.datasets.lemma_bi import Metadata
+from slowfast.datasets.lemma_tpv import Metadata
 
 @torch.no_grad()
 def gen_pred_labels(composed_labels):

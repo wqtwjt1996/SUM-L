@@ -5,10 +5,8 @@
 
 import torch
 import torch.nn as nn
-# Qitong on Dec. 18th, 2021.
 import torch.nn.functional as F
 from detectron2.layers import ROIAlign
-# Qitong on Jan. 3rd, 2022.
 import math
 
 
@@ -133,263 +131,6 @@ class ResNetRoIHead(nn.Module):
         x = self.act(x)
         return x
 
-class ResNetCAMCONRoIHead(nn.Module):
-    """
-        Qitong on Apr. 14th, 2022.
-    """
-
-    def __init__(
-        self,
-        dim_in,
-        con_last_dim,
-        pool_size,
-        resolution,
-        scale_factor,
-        dropout_rate=0.0,
-        aligned=True,
-    ):
-        """
-        The `__init__` method of any subclass should also contain these
-            arguments.
-        ResNetRoIHead takes p pathways as input where p in [1, infty].
-
-        Args:
-            dim_in (list): the list of channel dimensions of the p inputs to the
-                ResNetHead.
-            num_classes (int): the channel dimensions of the p outputs to the
-                ResNetHead.
-            pool_size (list): the list of kernel sizes of p spatial temporal
-                poolings, temporal pool kernel size, spatial pool kernel size,
-                spatial pool kernel size in order.
-            resolution (list): the list of spatial output size from the ROIAlign.
-            scale_factor (list): the list of ratio to the input boxes by this
-                number.
-            dropout_rate (float): dropout rate. If equal to 0.0, perform no
-                dropout.
-            act_func (string): activation function to use. 'softmax': applies
-                softmax on the output. 'sigmoid': applies sigmoid on the output.
-            aligned (bool): if False, use the legacy implementation. If True,
-                align the results more perfectly.
-        Note:
-            Given a continuous coordinate c, its two neighboring pixel indices
-            (in our pixel model) are computed by floor (c - 0.5) and ceil
-            (c - 0.5). For example, c=1.3 has pixel neighbors with discrete
-            indices [0] and [1] (which are sampled from the underlying signal at
-            continuous coordinates 0.5 and 1.5). But the original roi_align
-            (aligned=False) does not subtract the 0.5 when computing neighboring
-            pixel indices and therefore it uses pixels with a slightly incorrect
-            alignment (relative to our pixel model) when performing bilinear
-            interpolation.
-            With `aligned=True`, we first appropriately scale the ROI and then
-            shift it by -0.5 prior to calling roi_align. This produces the
-            correct neighbors; It makes negligible differences to the model's
-            performance if ROIAlign is used together with conv layers.
-        """
-        super(ResNetCAMCONRoIHead, self).__init__()
-        assert (
-            len({len(pool_size), len(dim_in)}) == 1
-        ), "pathway dimensions are not consistent."
-        self.num_pathways = len(pool_size)
-        for pathway in range(self.num_pathways):
-            temporal_pool = nn.AvgPool3d(
-                [pool_size[pathway][0], 1, 1], stride=1
-            )
-            self.add_module("s{}_tpool".format(pathway), temporal_pool)
-
-            roi_align = ROIAlign(
-                resolution[pathway],
-                spatial_scale=1.0 / scale_factor[pathway],
-                sampling_ratio=0,
-                aligned=aligned,
-            )
-            self.add_module("s{}_roi".format(pathway), roi_align)
-            spatial_pool = nn.MaxPool2d(resolution[pathway], stride=1)
-            self.add_module("s{}_spool".format(pathway), spatial_pool)
-
-        if dropout_rate > 0.0:
-            self.dropout = nn.Dropout(dropout_rate)
-
-        # Perform FC in a fully convolutional manner. The FC layer will be
-        # initialized with a different std comparing to convolutional layers.
-        self.projection = nn.Linear(sum(dim_in), con_last_dim, bias=True)
-
-    def forward(self, inputs, bboxes):
-        res = []
-        for idx in range(bboxes.size()[1]):
-            bbox = bboxes[:, idx, :]
-            assert (
-                    len(inputs) == self.num_pathways
-            ), "Input tensor does not contain {} pathway".format(self.num_pathways)
-            pool_out = []
-            for pathway in range(self.num_pathways):
-                t_pool = getattr(self, "s{}_tpool".format(pathway))
-                out = t_pool(inputs[pathway])
-                assert out.shape[2] == 1
-                out = torch.squeeze(out, 2)
-
-                roi_align = getattr(self, "s{}_roi".format(pathway))
-                out = roi_align(out, bbox)
-
-                s_pool = getattr(self, "s{}_spool".format(pathway))
-                pool_out.append(s_pool(out))
-
-            # B C H W.
-            x = torch.cat(pool_out, 1).squeeze()
-
-            # Perform dropout.
-            if hasattr(self, "dropout"):
-                x = self.dropout(x)
-
-            # x = x.view(x.shape[0], -1)
-            # print(x.size())
-            res.append(x.unsqueeze(1))
-            # res.append(self.projection(x))
-        # print(torch.cat(res, 1).size())
-        return self.projection(torch.cat(res, dim=1))
-
-class ResNetCHRRoIHead(nn.Module):
-    """
-    ResNe(X)t CHR RoI head.
-    """
-
-    def __init__(
-        self,
-        dim_in,
-        num_classes,
-        pool_size,
-        resolution,
-        scale_factor,
-        dropout_rate=0.0,
-        act_func="softmax",
-        aligned=True,
-    ):
-        """
-            Qitong on Mar. 5th, 2022.
-        """
-        super(ResNetCHRRoIHead, self).__init__()
-        assert (
-            len({len(pool_size), len(dim_in)}) == 1
-        ), "pathway dimensions are not consistent."
-        self.num_pathways = len(pool_size)
-        for pathway in range(self.num_pathways):
-            temporal_pool = nn.AvgPool3d(
-                [pool_size[pathway][0], 1, 1], stride=1
-            )
-            self.add_module("s{}_tpool".format(pathway), temporal_pool)
-
-            roi_align = ROIAlign(
-                resolution[pathway],
-                spatial_scale=1.0 / scale_factor[pathway],
-                sampling_ratio=0,
-                aligned=aligned,
-            )
-            self.add_module("s{}_roi".format(pathway), roi_align)
-            spatial_pool = nn.MaxPool2d(resolution[pathway], stride=1)
-            self.add_module("s{}_spool".format(pathway), spatial_pool)
-
-        if dropout_rate > 0.0:
-            self.dropout = nn.Dropout(dropout_rate)
-
-        # Perform FC in a fully convolutional manner. The FC layer will be
-        # initialized with a different std comparing to convolutional layers.
-        self.projection = nn.Linear(sum(dim_in), num_classes, bias=True)
-
-        # Softmax for evaluation and testing.
-        if act_func == "softmax":
-            self.act = nn.Softmax(dim=4)
-        elif act_func == "sigmoid":
-            self.act = nn.Sigmoid()
-        else:
-            raise NotImplementedError(
-                "{} is not supported as an activation"
-                "function.".format(act_func)
-            )
-
-    def forward(self, inputs, bboxes):
-        res_tensors = []
-        for idx in range(bboxes.size()[1]):
-            bbox = bboxes[:, idx, :]
-            assert (
-                    len(inputs) == self.num_pathways
-            ), "Input tensor does not contain {} pathway".format(self.num_pathways)
-            pool_out = []
-            for pathway in range(self.num_pathways):
-                t_pool = getattr(self, "s{}_tpool".format(pathway))
-                out = t_pool(inputs[pathway])
-                assert out.shape[2] == 1
-                out = torch.squeeze(out, 2)
-
-                roi_align = getattr(self, "s{}_roi".format(pathway))
-                out = roi_align(out, bbox)
-
-                s_pool = getattr(self, "s{}_spool".format(pathway))
-                pool_out.append(s_pool(out))
-
-            res_tensors.append(torch.cat(pool_out, 1).squeeze().unsqueeze(1))
-        return torch.cat(res_tensors, 1)
-
-
-class ResNetCAMCHRRoIHead(nn.Module):
-    """
-    ResNe(X)t CAM CHR RoI head.
-    """
-
-    def __init__(
-        self,
-        dim_in,
-        pool_size,
-        resolution,
-        scale_factor,
-        aligned=True,
-    ):
-        """
-            Qitong on Apr. 8th, 2022.
-        """
-        super(ResNetCAMCHRRoIHead, self).__init__()
-        assert (
-            len({len(pool_size), len(dim_in)}) == 1
-        ), "pathway dimensions are not consistent."
-        self.num_pathways = len(pool_size)
-        for pathway in range(self.num_pathways):
-            temporal_pool = nn.AvgPool3d(
-                [pool_size[pathway][0], 1, 1], stride=1
-            )
-            self.add_module("s{}_tpool".format(pathway), temporal_pool)
-
-            roi_align = ROIAlign(
-                resolution[pathway],
-                spatial_scale=1.0 / scale_factor[pathway],
-                sampling_ratio=0,
-                aligned=aligned,
-            )
-            self.add_module("s{}_roi".format(pathway), roi_align)
-            spatial_pool = nn.MaxPool2d(resolution[pathway], stride=1)
-            self.add_module("s{}_spool".format(pathway), spatial_pool)
-
-    def forward(self, inputs, bboxes):
-        res_tensors = []
-        for idx in range(bboxes.size()[1]):
-            bbox = bboxes[:, idx, :]
-            assert (
-                    len(inputs) == self.num_pathways
-            ), "Input tensor does not contain {} pathway".format(self.num_pathways)
-            pool_out = []
-            for pathway in range(self.num_pathways):
-                t_pool = getattr(self, "s{}_tpool".format(pathway))
-                out = t_pool(inputs[pathway])
-                assert out.shape[2] == 1
-                out = torch.squeeze(out, 2)
-
-                roi_align = getattr(self, "s{}_roi".format(pathway))
-                out = roi_align(out, bbox)
-
-                s_pool = getattr(self, "s{}_spool".format(pathway))
-                pool_out.append(s_pool(out))
-
-            res_tensors.append(torch.cat(pool_out, 1).squeeze().unsqueeze(1))
-        return torch.cat(res_tensors, 1)
-
-
 class ResNetBasicHead(nn.Module):
     """
     ResNe(X)t 3D head.
@@ -486,9 +227,6 @@ class ResNetBasicHead(nn.Module):
         return x, {}
 
 class ResNetBasicHead_LateCon(nn.Module):
-    """
-        Qitong on Mar. 19th, 2021.
-    """
 
     def __init__(
         self,
@@ -540,9 +278,6 @@ class ResNetBasicHead_LateCon(nn.Module):
             )
 
     def _get_multilabel_kl_loss(self, fpv_feat, tpv_feat, label):
-        """
-        Qitong on Feb. 24th, 2022.
-        """
         sim_preds = fpv_feat @ tpv_feat.T / self.temp
         sim_targets = label @ label.T
         # print('feat', F.softmax(sim_preds))
@@ -598,10 +333,6 @@ class ResNetBasicHead_LateCon(nn.Module):
         return x_, loss
 
 class ResNetActHead(nn.Module):
-    """
-        Qitong on Mar. 19th, 2022.
-    """
-
     def __init__(
         self,
         dim_in,
@@ -676,10 +407,6 @@ class ResNetActHead(nn.Module):
         return x, {}
 
 class ResNetPiHead(nn.Module):
-    """
-    Qitong on Jan. 3rd, 2022.
-    """
-
     def __init__(
         self,
         dim_in,
@@ -785,9 +512,6 @@ class ResNetPiHead(nn.Module):
         return x, return_loss
 
 class ResNetContrastiveHead(nn.Module):
-    """
-    Qitong Wang on Dec. 18th, 2021.
-    """
     def __init__(
         self,
         dim_in,
@@ -868,19 +592,10 @@ class ResNetContrastiveHead(nn.Module):
         x = torch.cat(pool_out, 1)
         # (N, C, T, H, W) -> (N, T, H, W, C).
         x = x.permute((0, 2, 3, 4, 1))
-        # Perform dropout.
-        # if hasattr(self, "dropout"):
-        #     x = self.dropout(x)
         # Perform contrastive learning
         if self.training:
-            # x_ = self.con_proj(x)
-            # fpv_x = F.normalize(x_[:int(self.batch_size / 2)].squeeze(), dim=-1)
-            # fpv_x = F.normalize(self.fpv_mlp(x_[:int(self.batch_size / 2)].squeeze()), dim=-1)
-            # tpv_x = F.normalize(x_[int(self.batch_size / 2):].squeeze(), dim=-1)
-            # divide mlp
             fpv_x = F.normalize(self.con_proj_fpv(x[:int(self.batch_size / 2)].squeeze()), dim=-1)
             tpv_x = F.normalize(self.con_proj_tpv(x[int(self.batch_size / 2):].squeeze()), dim=-1)
-            # print(233333)
             sim_preds = fpv_x @ tpv_x.T / self.temp
             sim_targets = torch.zeros(sim_preds.size()).to(x.device)
             sim_targets.fill_diagonal_(1)
@@ -901,9 +616,6 @@ class ResNetContrastiveHead(nn.Module):
         return x, return_loss
 
 class ResNetTimeContrastiveHead(nn.Module):
-    """
-    Qitong Wang on Apr. 19th, 2022.
-    """
     def __init__(
         self,
         dim_in,
@@ -944,21 +656,15 @@ class ResNetTimeContrastiveHead(nn.Module):
             m = getattr(self, "pathway{}_avgpool".format(pathway))
             pool_out.append(m(inputs[pathway]))
         x = torch.cat(pool_out, 1)
-        # print(x.size(), 'before')
-        # (N, C, T, H, W) -> (N, T, H, W, C).
         x = x.permute((0, 2, 3, 4, 1)).squeeze()
         # Perform dropout.
         if hasattr(self, "dropout"):
             x = self.dropout(x)
         # Perform projection
         x = self.con_proj(x)
-        # print(x.size(), 'after')
         return x
 
 class ResNetMeanTeacherContrastiveHead(nn.Module):
-    """
-    Qitong Wang on Jan. 5th, 2022.
-    """
     def __init__(
         self,
         dim_in,
@@ -982,8 +688,6 @@ class ResNetMeanTeacherContrastiveHead(nn.Module):
         self.self_dim = 768
         self.con_proj = nn.Sequential(
             nn.Linear(sum(dim_in), con_last_dim),
-            # nn.ReLU(inplace=True),
-            # nn.Linear(self.self_dim, con_last_dim),
         )
         if dropout_rate > 0.0:
             self.dropout = nn.Dropout(dropout_rate)
@@ -1008,9 +712,6 @@ class ResNetMeanTeacherContrastiveHead(nn.Module):
         return x
 
 class ResNetMeanTeacherContrastiveHead_MP(nn.Module):
-    """
-    Qitong Wang on Mar. 21st, 2022.
-    """
     def __init__(
         self,
         dim_in,
@@ -1034,8 +735,6 @@ class ResNetMeanTeacherContrastiveHead_MP(nn.Module):
         self.self_dim = 768
         self.con_proj = nn.Sequential(
             nn.Linear(sum(dim_in), con_last_dim),
-            # nn.ReLU(inplace=True),
-            # nn.Linear(self.self_dim, con_last_dim),
         )
         if dropout_rate > 0.0:
             self.dropout = nn.Dropout(dropout_rate)
@@ -1060,9 +759,6 @@ class ResNetMeanTeacherContrastiveHead_MP(nn.Module):
         return x
 
 class ResNetMeanTeacherContrastiveHead_NoPool(nn.Module):
-    """
-    Qitong Wang on Feb. 24th, 2022.
-    """
     def __init__(
         self,
         dim_in,
@@ -1114,9 +810,6 @@ class ResNetMeanTeacherContrastiveHead_NoPool(nn.Module):
         return x
 
 class ResNetUnsupervisedContrastiveHead(nn.Module):
-    """
-    Qitong Wang on Jan. 1st, 2022.
-    """
     def __init__(
         self,
         dim_in,
@@ -1170,10 +863,6 @@ class ResNetUnsupervisedContrastiveHead(nn.Module):
         x = x.permute((0, 2, 3, 4, 1))
         # Perform contrastive learning
         if self.training:
-            # x_ = self.con_proj(x)
-            # fpv_x = F.normalize(x_[:int(self.batch_size / 2)].squeeze(), dim=-1)
-            # # fpv_x = F.normalize(self.fpv_mlp(x_[:int(self.batch_size / 2)].squeeze()), dim=-1)
-            # tpv_x = F.normalize(x_[int(self.batch_size / 2):].squeeze(), dim=-1)
             # divide mlp
             fpv_x = F.normalize(self.con_proj_fpv(x[:int(self.batch_size / 2)].squeeze()), dim=-1)
             tpv_x = F.normalize(self.con_proj_tpv(x[int(self.batch_size / 2):].squeeze()), dim=-1)
@@ -1188,10 +877,6 @@ class ResNetUnsupervisedContrastiveHead(nn.Module):
         return None, return_loss
 
 class ResNetContrastiveAttHead(nn.Module):
-    """
-    Qitong Wang on Dec. 18th, 2021.
-    WARNING: slowfast not implemented!!
-    """
     def __init__(
         self,
         dim_in,
@@ -1282,8 +967,6 @@ class ResNetContrastiveAttHead(nn.Module):
             sim_targets = torch.zeros(sim_preds.size()).to(x.device)
             sim_targets.fill_diagonal_(1)
             loss_con = -torch.sum(F.log_softmax(sim_preds, dim=1) * sim_targets, dim=1).mean()
-            # loss_att = torch.mean(torch.cosine_similarity(att_fpv_x, att_tpv_x))
-            # loss_att = torch.sqrt(torch.mean((att_fpv_x - att_tpv_x) ** 2))
             loss_att = F.mse_loss(att_fpv_x, att_tpv_x, reduction='mean')
         # Perform dropout.
         if hasattr(self, "dropout"):

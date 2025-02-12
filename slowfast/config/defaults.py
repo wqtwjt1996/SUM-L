@@ -72,6 +72,14 @@ _C.TRAIN.CHECKPOINT_INFLATE = False
 
 _C.TRAIN.RESUME = False
 
+# Biview training only...
+_C.TRAIN.DATA_SWITCH = 0
+
+_C.TRAIN.TEACHER_CKPT = ""
+_C.TRAIN.TEACHER_CKPT_2 = ""
+_C.TRAIN.K400_CKPT = ""
+_C.TRAIN.LEMMA_CKPT = ""
+
 
 # ---------------------------------------------------------------------------- #
 # Testing options
@@ -200,6 +208,107 @@ _C.MODEL.FC_INIT_STD = 0.01
 # Activation layer for the output head.
 _C.MODEL.HEAD_ACT = "softmax"
 
+# Qitong on Dec. 18th, 2021.
+_C.MODEL.CONTRASTIVE = False
+_C.MODEL.TEMP = 0.07
+_C.MODEL.TEMP_CHR = 0.07
+_C.MODEL.ATT = False
+
+# Qitong on Jan. 1st, 2022.
+_C.MODEL.UNSUP = False
+# Qitong on Jan. 3rd, 2022.
+_C.MODEL.PiTS = False
+_C.MODEL.PiKL = False
+_C.MODEL.MOMENTUM = -1.0
+_C.MODEL.MOMENTUM_K400 = -1.0
+_C.MODEL.MOMENTUM_A3I = -1.0
+_C.MODEL.P_MOMENTUM = -1.0
+_C.MODEL.QUEUE = -1
+_C.MODEL.QUEUE_CAM = -1
+_C.MODEL.MT_UNSUP_K = -1
+_C.MODEL.MT_UNSUP_N = -1
+_C.MODEL.K400_K = -1
+_C.MODEL.D = False
+_C.MODEL.FEAT = False
+_C.MODEL.L_MT = 0.
+_C.MODEL.L_MT_CHR = 0.
+_C.MODEL.L_POS = 0.
+_C.MODEL.L_CON = 0.
+_C.MODEL.L_CON_V = 0.
+_C.MODEL.L_CON_N = 0.
+_C.MODEL.L_TIME = 0.
+_C.MODEL.L_CON_TIME = 0.
+_C.MODEL.L_CON_CHR = 0.
+_C.MODEL.L_CON_ACT = 0.
+_C.MODEL.L_CON_CHR_ACT = 0.
+_C.MODEL.L_CLS = 0.
+_C.MODEL.L_K400 = 0.
+_C.MODEL.L_K400_V = 0.
+_C.MODEL.L_K400_N = 0.
+_C.MODEL.L_K400_CONSISTENCY = 0.
+_C.MODEL.L_K400_CLS = 0.
+_C.MODEL.L_K400_CHR = 0.
+_C.MODEL.L_K400_CHR_V = 0.
+_C.MODEL.L_K400_CHR_N = 0.
+_C.MODEL.L_K400_PAIR = 0.
+_C.MODEL.L_K400_PAIR_ALIGN = 0.
+_C.MODEL.L_ATT_POS = 0.
+_C.MODEL.SOFT_ALPHA = -1.0
+_C.MODEL.TPV_ALPHA = -1.0
+_C.MODEL.CON_LOGIT_L2 = False
+_C.MODEL.CON_LAST_DIM = 768
+_C.MODEL.ST_LAST_DIM = 128
+_C.MODEL.K400_CON_LAST_DIM = 1024
+_C.MODEL.K400_SWITCH = 0
+_C.MODEL.LD_IDX = 0
+_C.MODEL.K400_EB = 100
+_C.MODEL.K400_TOKEN = -1
+_C.MODEL.EPIC_TOKEN = -1
+_C.MODEL.EPIC_TOKEN_V = -1
+_C.MODEL.EPIC_TOKEN_N = -1
+_C.MODEL.OOD_ST = False
+_C.MODEL.HEAD_ONE = True
+_C.MODEL.MULTILABEL = False
+_C.MODEL.SH = False
+_C.MODEL.STAP = False
+_C.MODEL.EPOCH_ST = -1
+_C.MODEL.DCL_THRES = 0.8
+_C.MODEL.DCL_SIGMA = 0.5
+# Qitong on Mar. 4th
+_C.CHR_TRANS = CfgNode()
+_C.CHR_TRANS.ID = 2048
+_C.CHR_TRANS.HD = 128
+_C.CHR_TRANS.OD = 2048
+_C.CHR_TRANS.N_HEAD = 4
+_C.CHR_TRANS.N_LAYER = 3
+_C.CHR_TRANS.CAM_THRES = 1.0
+_C.CHR_TRANS.CAM_THRES_LOW = 0.5
+_C.CHR_TRANS.CAM_SELF_ATT = False
+_C.CHR_TRANS.CAM_SCHE_ALPHA = 0.0
+_C.CHR_TRANS.CAM_GCE_Q = 1e-5
+_C.CHR_TRANS.DROPOUT_RATE = 0.0
+# Qitong on Mar. 5th
+_C.CHR_TRANS.CHR_N_TOKEN = 1
+_C.CHR_TRANS.CHR_N_BOX = 4
+_C.CHR_TRANS.CHR_BOX_SWITCH = 0
+_C.CHR_TRANS.DIR_BOX = True
+# Qitong on Mar. 12th
+_C.CHR_TRANS_BBOX = CfgNode()
+_C.CHR_TRANS_BBOX.RANDOM_MIN_S_FPV = 0.1
+_C.CHR_TRANS_BBOX.RANDOM_MAX_S_FPV = 0.5
+_C.CHR_TRANS_BBOX.RANDOM_HW_RATIO_FPV = 2.0
+_C.CHR_TRANS_BBOX.RANDOM_MIN_S_TPV = 0.1
+_C.CHR_TRANS_BBOX.RANDOM_MAX_S_TPV = 0.5
+_C.CHR_TRANS_BBOX.RANDOM_HW_RATIO_TPV = 2.0
+_C.CHR_TRANS_BBOX.SLIC_N_SEGMENT_FPV = 16
+_C.CHR_TRANS_BBOX.SLIC_COMPACTNESS_FPV = 16
+_C.CHR_TRANS_BBOX.MIN_RS_FPV = 0.05
+_C.CHR_TRANS_BBOX.NMS_THES_FPV = 0.5
+_C.CHR_TRANS_BBOX.SLIC_N_SEGMENT_TPV = 16
+_C.CHR_TRANS_BBOX.SLIC_COMPACTNESS_TPV = 16
+_C.CHR_TRANS_BBOX.MIN_RS_TPV = 0.05
+_C.CHR_TRANS_BBOX.NMS_THES_TPV = 0.5
+
 
 # -----------------------------------------------------------------------------
 # SlowFast options
@@ -286,6 +395,42 @@ _C.DATA.ENSEMBLE_METHOD = "sum"
 
 # If True, revert the default input channel (RBG <-> BGR).
 _C.DATA.REVERSE_INPUT_CHANNEL = False
+
+# Qitong on Jun. 10th, 2022.
+_C.DATA.RANDAUG_N = 2
+_C.DATA.RANDAUG_M = 9
+
+# Qitong on Jul. 5th, 2022.
+_C.DATA.FPV_ONLY = False
+_C.DATA.TPV_ONLY = False
+
+# ---------------------------------------------------------------------------- #
+# LEMMA Experiment options
+# ---------------------------------------------------------------------------- #
+_C.EXP = CfgNode()
+
+# Type of image for inference (rgb | flow)
+_C.EXP.IMG_TYPE = "rgb"
+
+# Type of label for inference (verb | noun | hoi)
+_C.EXP.LABEL_TYPE = "verb"
+
+# Type of view source for inference (tpv | fpv)
+_C.EXP.VIEW_TYPE = "fpv"
+
+# Type of supervision added (none | task)
+_C.EXP.SUPERVISION = 'none'
+
+# Type of model, whether using new model (plain | composed)
+_C.EXP.MODEL_TYPE = 'plain'
+
+# Type of task performed on the data (pred | rec)
+_C.EXP.TASK = "rec"
+
+# Type of activities in the video (1x1 | 1x2 | 2x1 | 2x2)
+_C.EXP.VIDEO_TYPE = '2x1'
+
+_C.EXP.USE_BOTH_VIEW = False
 
 # ---------------------------------------------------------------------------- #
 # Optimizer options
@@ -415,6 +560,82 @@ _C.DETECTION.SPATIAL_SCALE_FACTOR = 16
 # RoI tranformation resolution.
 _C.DETECTION.ROI_XFORM_RESOLUTION = 7
 
+
+# -----------------------------------------------------------------------------
+# AVA Dataset options
+# -----------------------------------------------------------------------------
+_C.AVA = CfgNode()
+
+# Directory path of frames.
+_C.AVA.FRAME_DIR = "/mnt/fair-flash3-east/ava_trainval_frames.img/"
+
+# Directory path for files of frame lists.
+_C.AVA.FRAME_LIST_DIR = (
+    "/mnt/vol/gfsai-flash3-east/ai-group/users/haoqifan/ava/frame_list/"
+)
+
+# Directory path for annotation files.
+_C.AVA.ANNOTATION_DIR = (
+    "/mnt/vol/gfsai-flash3-east/ai-group/users/haoqifan/ava/frame_list/"
+)
+
+# Filenames of training samples list files.
+_C.AVA.TRAIN_LISTS = ["train.csv"]
+
+# Filenames of test samples list files.
+_C.AVA.TEST_LISTS = ["val.csv"]
+
+# Filenames of box list files for training. Note that we assume files which
+# contains predicted boxes will have a suffix "predicted_boxes" in the
+# filename.
+_C.AVA.TRAIN_GT_BOX_LISTS = ["ava_train_v2.2.csv"]
+_C.AVA.TRAIN_PREDICT_BOX_LISTS = []
+
+# Filenames of box list files for test.
+_C.AVA.TEST_PREDICT_BOX_LISTS = ["ava_val_predicted_boxes.csv"]
+
+# This option controls the score threshold for the predicted boxes to use.
+_C.AVA.DETECTION_SCORE_THRESH = 0.9
+
+# If use BGR as the format of input frames.
+_C.AVA.BGR = False
+
+# Training augmentation parameters
+# Whether to use color augmentation method.
+_C.AVA.TRAIN_USE_COLOR_AUGMENTATION = False
+
+# Whether to only use PCA jitter augmentation when using color augmentation
+# method (otherwise combine with color jitter method).
+_C.AVA.TRAIN_PCA_JITTER_ONLY = True
+
+# Eigenvalues for PCA jittering. Note PCA is RGB based.
+_C.AVA.TRAIN_PCA_EIGVAL = [0.225, 0.224, 0.229]
+
+# Eigenvectors for PCA jittering.
+_C.AVA.TRAIN_PCA_EIGVEC = [
+    [-0.5675, 0.7192, 0.4009],
+    [-0.5808, -0.0045, -0.8140],
+    [-0.5836, -0.6948, 0.4203],
+]
+
+# Whether to do horizontal flipping during test.
+_C.AVA.TEST_FORCE_FLIP = False
+
+# Whether to use full test set for validation split.
+_C.AVA.FULL_TEST_ON_VAL = False
+
+# The name of the file to the ava label map.
+_C.AVA.LABEL_MAP_FILE = "ava_action_list_v2.2_for_activitynet_2019.pbtxt"
+
+# The name of the file to the ava exclusion.
+_C.AVA.EXCLUSION_FILE = "ava_val_excluded_timestamps_v2.2.csv"
+
+# The name of the file to the ava groundtruth.
+_C.AVA.GROUNDTRUTH_FILE = "ava_val_v2.2.csv"
+
+# Backend to process image, includes `pytorch` and `cv2`.
+_C.AVA.IMG_PROC_BACKEND = "cv2"
+
 # ---------------------------------------------------------------------------- #
 # Multigrid training options
 # See https://arxiv.org/abs/1912.00998 for details about multigrid training.
@@ -539,6 +760,19 @@ _C.DEMO.DETECTRON2_OBJECT_DETECTION_MODEL_CFG = ""
 _C.DEMO.DETECTRON2_OBJECT_DETECTION_MODEL_WEIGHTS = ""
 
 _C.DEMO.OUTPUT_FILE = ""
+
+
+# ---------------------------------------------------------------------------- #
+# Qitong's options
+# ---------------------------------------------------------------------------- #
+_C.TRAIN.TRAIN_DATA_LIST_FPV = ""
+_C.TRAIN.TRAIN_DATA_LIST_TPV = ""
+_C.TRAIN.VAL_DATA_LIST_FPV = ""
+_C.TRAIN.VAL_DATA_LIST_TPV = ""
+_C.TEST.DATA_LIST_FPV = ""
+_C.TEST.DATA_LIST_TPV = ""
+_C.TEST.TEST_ONLY = False
+_C.TEST.THRES = 0.5
 
 def _assert_and_infer_cfg(cfg):
     # BN assertions.
