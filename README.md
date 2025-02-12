@@ -39,6 +39,20 @@ mkdir -p data/epic-100/
 ln -s  /path/to/EPIC-KITCHENS-100 data/epic-100/dataset
 ln -s /path/to/epic-kitchens-100-annotations data/epic-100/annotations
 ```
+### LEMMA
+
+Please visit [official LEMMA website](https://sites.google.com/view/lemma-activity) to download the LEMMA dataset, we only need TPV data. 
+We recommend you put them into the `./data` directory.
+
+### Training on Epic-Kitchen-100:
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python -m torch.distributed.launch --nproc_per_node 8 --master_port 23393 tools/run_net_epic_2.py --cfg configs/epic-kitchen-100/Ego_Exo_SLOWFAST_8x8_R101_TPV.yaml
+```
+Note: in the config and dataset-related files, please modify the dataset and other paths to match your installation. 
+In addition to the datasets provided above, the files you need and their corresponding links are as follows:
+
+1. Checkpoint of TPV backbone, trained on LEMMA-TPV dataset [Link](https://drive.google.com/file/d/1iE1GvofKYkfhhdWoEGRmC75L5N-NN1A-/view?usp=sharing).
+2. Two files of pseudo-pair dictionary between EPIC-Kitchen-100 and LEMMA-TPV [Link1](https://drive.google.com/file/d/1Qo1GnAavJSAxLOpRgEmU_Xthac7Au-gI/view?usp=sharing), [Link2](https://drive.google.com/file/d/1kY-eoeU2M_iEuzGDU-WTSw2uAeH_Js9-/view?usp=sharing).
 
 ### Testing our trained weights on Epic-Kitchen-100:
 
@@ -57,8 +71,6 @@ Codebase References:
 https://github.com/facebookresearch/Ego-Exo/tree/main
 
 https://github.com/facebookresearch/SlowFast
-
-More code and pre-trained weights will be released soon. Please stay tuned. :)
 
 If you find our code or paper useful in your research, please consider citing:
 
